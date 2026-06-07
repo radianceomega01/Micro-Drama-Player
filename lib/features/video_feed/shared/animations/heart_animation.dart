@@ -28,7 +28,7 @@ class _HeartAnimationState extends State<HeartAnimation>
     CurvedAnimation(parent: _controller, curve: Curves.easeOut),
   );
 
-  late final Animation<double> _floatUp = Tween(begin: 0.0, end: -75.0).animate(
+  late final Animation<double> _floatUp = Tween(begin: 0.0, end: -125.0).animate(
     CurvedAnimation(parent: _controller, curve: Curves.easeOut),
   );
 
