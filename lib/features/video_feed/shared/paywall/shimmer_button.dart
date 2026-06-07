@@ -18,7 +18,7 @@ class _ShimmerButtonState extends State<ShimmerButton>
     controller = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
-    )..repeat(); // infinite shimmer loop
+    )..repeat();
   }
 
   @override
@@ -26,6 +26,14 @@ class _ShimmerButtonState extends State<ShimmerButton>
     return AnimatedBuilder(
       animation: controller,
       builder: (context, child) {
+        // Fix: clamp each stop so the list always stays within [0.0, 1.0].
+        // Without clamping, stops like [-0.3] or [1.3] cause a Flutter
+        // assertion error ("stops must be in the range 0.0 to 1.0").
+        final mid = controller.value;
+        final s0 = (mid - 0.3).clamp(0.0, 1.0);
+        final s1 = mid.clamp(0.0, 1.0);
+        final s2 = (mid + 0.3).clamp(0.0, 1.0);
+
         return Container(
           width: double.infinity,
           height: 50,
@@ -37,11 +45,7 @@ class _ShimmerButtonState extends State<ShimmerButton>
                 Colors.pink,
                 Colors.purple,
               ],
-              stops: [
-                controller.value - 0.3,
-                controller.value,
-                controller.value + 0.3,
-              ],
+              stops: [s0, s1, s2],
             ),
           ),
           child: const Center(

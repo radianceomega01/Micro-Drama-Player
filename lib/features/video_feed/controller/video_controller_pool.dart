@@ -9,26 +9,31 @@ class VideoControllerPool {
   final Map<int, VideoPlayerController> _controllers = {};
   final Map<int, String> _loadedUrls = {};
 
-  /// Get controller for index (reuse if possible)
+  /// Get controller for [index] (reuses existing one when URL matches).
   Future<VideoPlayerController> getController(
     int index,
     VideoModel video,
   ) async {
-    // already exists for same video → reuse
+    // Already loaded for this URL → reuse without re-initialising.
     if (_controllers.containsKey(index) &&
         _loadedUrls[index] == video.url) {
       return _controllers[index]!;
     }
 
-    // if pool exceeded → remove oldest
+    // Fix: evict the key that is furthest away from [index] rather than
+    // always evicting the first-inserted key. The old behaviour could
+    // dispose the currently-playing controller (index 0) while index 1 and
+    // 2 are loaded, causing a black screen.
     if (_controllers.length >= poolSize) {
-      final firstKey = _controllers.keys.first;
-      await _controllers[firstKey]?.dispose();
-      _controllers.remove(firstKey);
-      _loadedUrls.remove(firstKey);
+      final evictKey = _controllers.keys.reduce(
+        (a, b) => (a - index).abs() >= (b - index).abs() ? a : b,
+      );
+      await _controllers[evictKey]?.dispose();
+      _controllers.remove(evictKey);
+      _loadedUrls.remove(evictKey);
     }
 
-    final controller = VideoPlayerController.network(video.url);
+    final controller = VideoPlayerController.networkUrl(Uri.parse(video.url));
 
     await controller.initialize();
     controller.setLooping(true);

@@ -4,12 +4,12 @@ import '../../model/video_model.dart';
 import '../../controller/video_feed_controller.dart';
 import './video_gesture_layer.dart';
 
-class VideoPlayerTile extends StatefulWidget {
+class VideoPlayerTitle extends StatefulWidget {
   final VideoModel video;
   final int index;
   final VideoFeedController feedController;
 
-  const VideoPlayerTile({
+  const VideoPlayerTitle({
     super.key,
     required this.video,
     required this.index,
@@ -17,10 +17,10 @@ class VideoPlayerTile extends StatefulWidget {
   });
 
   @override
-  State<VideoPlayerTile> createState() => _VideoPlayerTileState();
+  State<VideoPlayerTitle> createState() => _VideoPlayerTitleState();
 }
 
-class _VideoPlayerTileState extends State<VideoPlayerTile> {
+class _VideoPlayerTitleState extends State<VideoPlayerTitle> {
   late Future<VideoPlayerController> _controllerFuture;
 
   @override
@@ -34,7 +34,7 @@ class _VideoPlayerTileState extends State<VideoPlayerTile> {
   }
 
   @override
-  void didUpdateWidget(covariant VideoPlayerTile oldWidget) {
+  void didUpdateWidget(covariant VideoPlayerTitle oldWidget) {
     super.didUpdateWidget(oldWidget);
 
     // if page changes, refresh controller binding safely
