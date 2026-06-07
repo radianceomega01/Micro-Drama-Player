@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../model/video_model.dart';
 import '../controller/video_feed_controller.dart';
 import '../shared/widgets/video_player_item.dart';
 import '../controller/scrubber_controller.dart';
 import '../shared/widgets/video_scrubber.dart';
+import '../data/video_mock_data.dart';
 
 class VideoFeedScreen extends StatefulWidget {
   const VideoFeedScreen({super.key});
@@ -21,26 +21,7 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
   // updated, making the scrubber's progress calculation wrong for every video.
   ScrubberController? _scrubberController;
 
-  final videos = [
-    VideoModel(
-      id: "1",
-      url:
-          "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-      thumbnail: "",
-    ),
-    VideoModel(
-      id: "2",
-      url:
-          "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
-      thumbnail: "",
-    ),
-    VideoModel(
-      id: "3",
-      url:
-          "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
-      thumbnail: "",
-    ),
-  ];
+  final videos = VideoMockData().videos;
 
   @override
   void initState() {
