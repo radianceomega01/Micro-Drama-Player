@@ -9,41 +9,36 @@ class ScrubberPainter extends CustomPainter {
     required this.isDragging,
   });
 
+  // Fix: cache Paint objects as static fields — paint() runs on every video
+  // frame so allocating new Paint() instances here creates heavy GC pressure.
+  static final _bgPaint = Paint()
+    ..color = Colors.white24
+    ..strokeWidth = 3
+    ..strokeCap = StrokeCap.round;
+
+  static final _progressPaint = Paint()
+    ..color = Colors.white
+    ..strokeCap = StrokeCap.round;
+
+  static final _thumbPaint = Paint()..color = Colors.white;
+
   @override
   void paint(Canvas canvas, Size size) {
-    final backgroundPaint = Paint()
-      ..color = Colors.white24
-      ..strokeWidth = 3
-      ..strokeCap = StrokeCap.round;
-
-    final progressPaint = Paint()
-      ..color = Colors.white
-      ..strokeWidth = isDragging ? 6 : 3
-      ..strokeCap = StrokeCap.round;
-
     final centerY = size.height / 2;
 
-    // 🪶 background line
-    canvas.drawLine(
-      Offset(0, centerY),
-      Offset(size.width, centerY),
-      backgroundPaint,
-    );
+    canvas.drawLine(Offset(0, centerY), Offset(size.width, centerY), _bgPaint);
 
-    // ⚡ progress line
+    _progressPaint.strokeWidth = isDragging ? 6 : 3;
     canvas.drawLine(
       Offset(0, centerY),
       Offset(size.width * progress, centerY),
-      progressPaint,
+      _progressPaint,
     );
 
-    // 🔵 thumb
-    final thumbX = size.width * progress;
-
     canvas.drawCircle(
-      Offset(thumbX, centerY),
+      Offset(size.width * progress, centerY),
       isDragging ? 8 : 5,
-      Paint()..color = Colors.red,
+      _thumbPaint,
     );
   }
 

@@ -11,53 +11,51 @@ class HeartAnimation extends StatefulWidget {
 
 class _HeartAnimationState extends State<HeartAnimation>
     with SingleTickerProviderStateMixin {
-  late AnimationController controller;
-  late Animation<double> scale;
-  late Animation<double> opacity;
-  late Animation<Offset> floatUp;
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 600),
+  );
+
+  late final Animation<double> _scale = Tween(begin: 0.2, end: 1.4).animate(
+    CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
+  );
+
+  // Fix: use FadeTransition instead of Opacity widget.
+  // Opacity forces a new compositing layer on every frame tick, which is
+  // expensive. FadeTransition uses the engine's opacity layer and avoids
+  // triggering a full repaint of child content.
+  late final Animation<double> _opacity = Tween(begin: 1.0, end: 0.0).animate(
+    CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+  );
+
+  late final Animation<double> _floatUp = Tween(begin: 0.0, end: -75.0).animate(
+    CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+  );
 
   @override
   void initState() {
     super.initState();
-
-    controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
-
-    scale = Tween(
-      begin: 0.2,
-      end: 1.4,
-    ).animate(CurvedAnimation(parent: controller, curve: Curves.elasticOut));
-
-    opacity = Tween(
-      begin: 1.0,
-      end: 0.0,
-    ).animate(CurvedAnimation(parent: controller, curve: Curves.easeOut));
-
-    floatUp = Tween(
-      begin: Offset.zero,
-      end: const Offset(0, -1.5),
-    ).animate(CurvedAnimation(parent: controller, curve: Curves.easeOut));
-
-    controller.forward();
+    _controller.forward();
   }
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: controller,
+      animation: _controller,
+      // Fix: pass the Icon as a static child so it is not rebuilt on every
+      // animation tick — only the transforms around it change.
+      child: const Icon(Icons.favorite, color: Colors.red, size: 60),
       builder: (_, child) {
         return Positioned(
           left: widget.position.dx - 30,
           top: widget.position.dy - 30,
-          child: Transform.translate(
-            offset: Offset(0, floatUp.value.dy * 50),
-            child: Opacity(
-              opacity: opacity.value,
+          child: FadeTransition(
+            opacity: _opacity,
+            child: Transform.translate(
+              offset: Offset(0, _floatUp.value),
               child: Transform.scale(
-                scale: scale.value,
-                child: const Icon(Icons.favorite, color: Colors.red, size: 60),
+                scale: _scale.value,
+                child: child,
               ),
             ),
           ),
@@ -68,7 +66,7 @@ class _HeartAnimationState extends State<HeartAnimation>
 
   @override
   void dispose() {
-    controller.dispose();
+    _controller.dispose();
     super.dispose();
   }
 }
