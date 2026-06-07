@@ -1,111 +1,79 @@
 import 'package:flutter/material.dart';
+import 'package:micro_drama_player/features/video_feed/shared/widgets/video_gesture_layer.dart';
 import 'package:video_player/video_player.dart';
 import '../../model/video_model.dart';
 import '../../controller/video_feed_controller.dart';
-import '../paywall/paywall_manager.dart';
+//import '../paywall/paywall_manager.dart';
 
+/// Pure display widget for a single feed page.
+///
+/// It asks [VideoFeedController] to load its controller, then renders it.
+/// All decisions about play, pause, seek, and paywall live in the controller.
 class VideoPlayerItem extends StatefulWidget {
-  final VideoFeedController controller;
+  final VideoFeedController feedController;
   final int index;
   final VideoModel video;
-
+ 
   const VideoPlayerItem({
     super.key,
-    required this.controller,
+    required this.feedController,
     required this.index,
     required this.video,
   });
-
+ 
   @override
   State<VideoPlayerItem> createState() => _VideoPlayerItemState();
 }
-
+ 
 class _VideoPlayerItemState extends State<VideoPlayerItem> {
   VideoPlayerController? _videoController;
-  late PaywallManager paywallManager;
-
-  bool _paywallTriggered = false;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-
-    final overlay = Overlay.of(context);
-    paywallManager = PaywallManager(overlay);
-  }
-
+ 
   @override
   void initState() {
     super.initState();
-    _init();
+    _load();
   }
-
-  Future<void> _init() async {
-    final ctrl = await widget.controller.pool.getController(
-      widget.index,
-      widget.video,
-    );
-
-    setState(() {
-      _videoController = ctrl;
-    });
-
-    if (widget.index == widget.controller.currentIndex) {
-      await ctrl.play();
-
-      _startPaywallTimer(ctrl);
-    }
+ 
+  Future<void> _load() async {
+    final ctrl = await widget.feedController.loadController(widget.index);
+    if (!mounted) return;
+    setState(() => _videoController = ctrl);
   }
-
-  void _startPaywallTimer(VideoPlayerController controller) {
-    if (_paywallTriggered) return;
-
-    _paywallTriggered = true;
-
-    Future.delayed(const Duration(seconds: 10), () {
-      if (!mounted) return;
-      if (!controller.value.isPlaying) return;
-
-      controller.pause();
-      paywallManager.show();
-    });
-  }
-
-  @override
-  void didUpdateWidget(covariant VideoPlayerItem oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    if (_videoController == null) return;
-
-    if (widget.index == widget.controller.currentIndex) {
-      _videoController!.play();
-      _startPaywallTimer(_videoController!);
-    } else {
-      _videoController!.pause();
-    }
-  }
-
+ 
   @override
   Widget build(BuildContext context) {
-    if (_videoController == null ||
-        !_videoController!.value.isInitialized) {
+    final ctrl = _videoController;
+ 
+    if (ctrl == null || !ctrl.value.isInitialized) {
       return const Center(child: CircularProgressIndicator());
     }
-
-    return SizedBox.expand(
-      child: FittedBox(
-        fit: BoxFit.cover,
-        child: SizedBox(
-          width: _videoController!.value.size.width,
-          height: _videoController!.value.size.height,
-          child: VideoPlayer(_videoController!),
-        ),
+ 
+    return VideoGestureLayer(
+      child: Stack(
+        children: [
+          // Full-screen video
+          SizedBox.expand(
+            child: FittedBox(
+              fit: BoxFit.cover,
+              child: SizedBox(
+                width: ctrl.value.size.width,
+                height: ctrl.value.size.height,
+                child: VideoPlayer(ctrl),
+              ),
+            ),
+          ),
+ 
+          // Hint label
+          const Positioned(
+            bottom: 80,
+            left: 20,
+            child: Text(
+              "Double tap to like ❤️",
+              style: TextStyle(color: Colors.white70),
+            ),
+          ),
+        ],
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
   }
 }

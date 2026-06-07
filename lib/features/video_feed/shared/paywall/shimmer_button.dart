@@ -14,7 +14,6 @@ class _ShimmerButtonState extends State<ShimmerButton>
   @override
   void initState() {
     super.initState();
-
     controller = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
@@ -25,11 +24,9 @@ class _ShimmerButtonState extends State<ShimmerButton>
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: controller,
-      builder: (context, child) {
-        // Fix: clamp each stop so the list always stays within [0.0, 1.0].
-        // Without clamping, stops like [-0.3] or [1.3] cause a Flutter
-        // assertion error ("stops must be in the range 0.0 to 1.0").
+      builder: (context, _) {
         final mid = controller.value;
+        // Clamp each stop so the list stays within [0.0, 1.0] at all times.
         final s0 = (mid - 0.3).clamp(0.0, 1.0);
         final s1 = mid.clamp(0.0, 1.0);
         final s2 = (mid + 0.3).clamp(0.0, 1.0);
@@ -40,21 +37,14 @@ class _ShimmerButtonState extends State<ShimmerButton>
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             gradient: LinearGradient(
-              colors: const [
-                Colors.purple,
-                Colors.pink,
-                Colors.purple,
-              ],
+              colors: const [Colors.purple, Colors.pink, Colors.purple],
               stops: [s0, s1, s2],
             ),
           ),
           child: const Center(
             child: Text(
               "Unlock Episode",
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
           ),
         );

@@ -90,7 +90,7 @@ class _PaywallOverlayState extends State<PaywallOverlay>
                     sigmaY: blur.value,
                   ),
                   child: Container(
-                    color: Colors.black.withOpacity(0.4),
+                    color: Colors.black.withValues(alpha: 0.4),
                   ),
                 ),
               ),

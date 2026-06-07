@@ -1,62 +1,76 @@
 import 'package:flutter/material.dart';
+import 'package:micro_drama_player/features/video_feed/shared/paywall/paywall_overlay.dart';
 import '../controller/video_feed_controller.dart';
 import '../shared/widgets/video_player_item.dart';
 import '../controller/scrubber_controller.dart';
 import '../shared/widgets/video_scrubber.dart';
 import '../data/video_mock_data.dart';
 
+/// Thin orchestration screen.
+///
+/// Creates the controller graph, reacts to paywall triggers by showing the
+/// overlay, and composes the feed + scrubber in the widget tree.
+/// No play/pause/seek/timer logic lives here.
 class VideoFeedScreen extends StatefulWidget {
   const VideoFeedScreen({super.key});
-
+ 
   @override
   State<VideoFeedScreen> createState() => _VideoFeedScreenState();
 }
-
+ 
 class _VideoFeedScreenState extends State<VideoFeedScreen> {
-  late final VideoFeedController controller;
-
-  // Fix: ScrubberController is recreated whenever the active video changes
-  // so it always holds the correct duration. The original code created it
-  // once with a hardcoded Duration(seconds: 1) placeholder that was never
-  // updated, making the scrubber's progress calculation wrong for every video.
-  ScrubberController? _scrubberController;
-
   final videos = VideoMockData().videos;
-
+ 
+  late final ScrubberController _scrubberController;
+  late final VideoFeedController _feedController;
+ 
+  OverlayEntry? _paywallEntry;
+ 
   @override
   void initState() {
     super.initState();
-
-    controller = VideoFeedController(videos);
-
-    // Rebuild the scrubber controller once the first video is initialised
-    // and its duration is known.
-    controller.addListener(_onFeedChanged);
-    controller.onPageChanged(0);
+ 
+    // ScrubberController is constructed with a zero duration; the real
+    // duration is pushed in by VideoFeedController.onPageChanged once the
+    // video initialises.
+    _scrubberController = ScrubberController(
+      videoDuration: Duration.zero,
+    );
+ 
+    _feedController = VideoFeedController(
+      videos: videos,
+      scrubberController: _scrubberController,
+      onPaywallTriggered: _showPaywall, // UI concern stays in the screen
+    );
+ 
+    // Kick off loading and playback of the first video.
+    _feedController.onPageChanged(0);
   }
-
-  /// Called whenever [VideoFeedController] notifies (i.e. on page change).
-  /// Recreates [_scrubberController] with the real video duration.
-  void _onFeedChanged() {
-    final duration = controller.activeDuration;
-
-    // Don't recreate if duration is still unknown or unchanged.
-    if (duration == Duration.zero) return;
-    if (_scrubberController?.videoDuration == duration) return;
-
-    final newScrubber = ScrubberController(videoDuration: duration);
-    controller.attachScrubber(newScrubber);
-
-    setState(() {
-      _scrubberController?.dispose();
-      _scrubberController = newScrubber;
-    });
+ 
+  // ─────────────────────────────────────────────
+  // Paywall overlay (UI concern — belongs here,
+  // not inside a controller or a widget item)
+  // ─────────────────────────────────────────────
+ 
+  void _showPaywall() {
+    if (_paywallEntry != null) return;
+ 
+    _paywallEntry = OverlayEntry(
+      builder: (_) => PaywallOverlay(onClose: _dismissPaywall),
+    );
+ 
+    Overlay.of(context).insert(_paywallEntry!);
   }
-
-  void _onSeek(Duration position) {
-    controller.activeController?.seekTo(position);
+ 
+  void _dismissPaywall() {
+    _paywallEntry?.remove();
+    _paywallEntry = null;
   }
-
+ 
+  // ─────────────────────────────────────────────
+  // Build
+  // ─────────────────────────────────────────────
+ 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -65,43 +79,39 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
           // Vertical paging feed
           PageView.builder(
             scrollDirection: Axis.vertical,
-            controller: controller.pageController,
-            onPageChanged: controller.onPageChanged,
+            controller: _feedController.pageController,
+            onPageChanged: _feedController.onPageChanged,
             itemCount: videos.length,
-            itemBuilder: (context, index) {
-              return VideoPlayerItem(
-                controller: controller,
-                index: index,
-                video: videos[index],
-              );
-            },
+            itemBuilder: (context, index) => VideoPlayerItem(
+              feedController: _feedController,
+              index: index,
+              video: videos[index],
+            ),
           ),
-
-          // Fix: VideoScrubber was never added to the widget tree in the
-          // original code. It is now overlaid at the bottom of the screen.
-          if (_scrubberController != null)
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 16,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: VideoScrubber(
-                  controller: _scrubberController!,
-                  onSeek: _onSeek,
-                ),
+ 
+          // Scrubber overlay at the bottom
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 16,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: VideoScrubber(
+                controller: _scrubberController,
+                onSeek: _feedController.seekTo,
               ),
             ),
+          ),
         ],
       ),
     );
   }
-
+ 
   @override
   void dispose() {
-    controller.removeListener(_onFeedChanged);
-    _scrubberController?.dispose();
-    controller.dispose();
+    _paywallEntry?.remove();
+    _scrubberController.dispose();
+    _feedController.dispose();
     super.dispose();
   }
 }
