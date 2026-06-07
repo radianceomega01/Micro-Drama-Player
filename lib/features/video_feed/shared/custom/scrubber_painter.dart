@@ -43,7 +43,7 @@ class ScrubberPainter extends CustomPainter {
     canvas.drawCircle(
       Offset(thumbX, centerY),
       isDragging ? 8 : 5,
-      Paint()..color = Colors.white,
+      Paint()..color = Colors.red,
     );
   }
 

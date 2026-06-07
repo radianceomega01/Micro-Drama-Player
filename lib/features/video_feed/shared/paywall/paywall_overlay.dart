@@ -47,13 +47,13 @@ class _PaywallOverlayState extends State<PaywallOverlay>
 
     // 🌫 Fade background
     fade = Tween<double>(
-      begin: 0.4,
+      begin: 0.2,
       end: 1.0,
     ).animate(controller);
 
     // 🌫 Blur intensity control
     blur = Tween<double>(
-      begin: 8,
+      begin: 35,
       end: 0,
     ).animate(controller);
 
