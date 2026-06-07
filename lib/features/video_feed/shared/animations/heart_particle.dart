@@ -62,7 +62,7 @@ class _HeartParticleState extends State<HeartParticle>
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: controller,
-      builder: (_, __) {
+      builder: (_, _) {
         return Positioned(
           left: widget.origin.dx,
           top: widget.origin.dy,
