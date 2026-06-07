@@ -93,6 +93,28 @@ class _VideoPlayerItemState extends State<VideoPlayerItem>
           ),
 
           // Bottom overlay: title + hint (left), heart (right)
+          // A gradient scrim behind the text ensures readability on any
+          // video frame colour — fades from transparent at the top to
+          // semi-opaque black at the bottom.
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: 180,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.75),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
           Positioned(
             bottom: 80,
             left: 20,
