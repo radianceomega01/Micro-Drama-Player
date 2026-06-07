@@ -5,10 +5,6 @@ import '../../model/video_model.dart';
 import '../../controller/video_feed_controller.dart';
 //import '../paywall/paywall_manager.dart';
 
-/// Pure display widget for a single feed page.
-///
-/// It asks [VideoFeedController] to load its controller, then renders it.
-/// All decisions about play, pause, seek, and paywall live in the controller.
 class VideoPlayerItem extends StatefulWidget {
   final VideoFeedController feedController;
   final int index;
@@ -25,8 +21,18 @@ class VideoPlayerItem extends StatefulWidget {
   State<VideoPlayerItem> createState() => _VideoPlayerItemState();
 }
  
-class _VideoPlayerItemState extends State<VideoPlayerItem> {
+class _VideoPlayerItemState extends State<VideoPlayerItem>
+    with SingleTickerProviderStateMixin {
   VideoPlayerController? _videoController;
+  bool _liked = false;
+ 
+  // Animation controller for the heart icon scale bounce on like.
+  late final AnimationController _heartController = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 300),
+    lowerBound: 0.8,
+    upperBound: 1.2,
+  );
  
   @override
   void initState() {
@@ -40,6 +46,12 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
     setState(() => _videoController = ctrl);
   }
  
+  void _onDoubleTap() {
+    setState(() => _liked = true);
+    // Bounce: grow then shrink back to 1.0.
+    _heartController.forward().then((_) => _heartController.reverse());
+  }
+ 
   @override
   Widget build(BuildContext context) {
     final ctrl = _videoController;
@@ -49,6 +61,7 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
     }
  
     return VideoGestureLayer(
+      onDoubleTap: _onDoubleTap,
       child: Stack(
         children: [
           // Full-screen video
@@ -63,17 +76,66 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
             ),
           ),
  
-          // Hint label
-          const Positioned(
+          // Bottom overlay: title + hint (left), heart icon (right)
+          Positioned(
             bottom: 80,
             left: 20,
-            child: Text(
-              "Double tap to like ❤️",
-              style: TextStyle(color: Colors.white70),
+            right: 20,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                // Left side: title + double tap hint
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        widget.video.title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Text(
+                            "Double tap to like",
+                            style: TextStyle(color: Colors.white70),
+                          ),
+                          SizedBox(width: 4),
+                          Icon(Icons.favorite, color: Colors.white70, size: 14),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+ 
+                const SizedBox(width: 12),
+ 
+                // Right side: liked heart icon
+                ScaleTransition(
+                  scale: _heartController,
+                  child: Icon(
+                    _liked ? Icons.favorite : Icons.favorite_border,
+                    color: _liked ? Colors.red : Colors.white,
+                    size: 36,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
+  }
+ 
+  @override
+  void dispose() {
+    _heartController.dispose();
+    super.dispose();
   }
 }

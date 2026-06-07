@@ -6,11 +6,6 @@ import '../controller/scrubber_controller.dart';
 import '../shared/widgets/video_scrubber.dart';
 import '../data/video_mock_data.dart';
 
-/// Thin orchestration screen.
-///
-/// Creates the controller graph, reacts to paywall triggers by showing the
-/// overlay, and composes the feed + scrubber in the widget tree.
-/// No play/pause/seek/timer logic lives here.
 class VideoFeedScreen extends StatefulWidget {
   const VideoFeedScreen({super.key});
  
@@ -30,66 +25,58 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
   void initState() {
     super.initState();
  
-    // ScrubberController is constructed with a zero duration; the real
-    // duration is pushed in by VideoFeedController.onPageChanged once the
-    // video initialises.
-    _scrubberController = ScrubberController(
-      videoDuration: Duration.zero,
-    );
+    _scrubberController = ScrubberController(videoDuration: Duration.zero);
  
     _feedController = VideoFeedController(
       videos: videos,
       scrubberController: _scrubberController,
-      onPaywallTriggered: _showPaywall, // UI concern stays in the screen
+      onPaywallTriggered: _showPaywall,
     );
  
-    // Kick off loading and playback of the first video.
-    _feedController.onPageChanged(0);
+    // Defer the first play until after the first frame so the PageView
+    // and its render surface exist before we call play(). Calling it in
+    // initState means the VideoPlayerController plays into a null texture,
+    // the scrubber moves but nothing is visible on screen.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _feedController.onPageChanged(VideoFeedController.kInitialPage);
+    });
   }
- 
-  // ─────────────────────────────────────────────
-  // Paywall overlay (UI concern — belongs here,
-  // not inside a controller or a widget item)
-  // ─────────────────────────────────────────────
  
   void _showPaywall() {
     if (_paywallEntry != null) return;
- 
     _paywallEntry = OverlayEntry(
       builder: (_) => PaywallOverlay(onClose: _dismissPaywall),
     );
- 
     Overlay.of(context).insert(_paywallEntry!);
   }
  
   void _dismissPaywall() {
     _paywallEntry?.remove();
     _paywallEntry = null;
+    _feedController.resume();
   }
- 
-  // ─────────────────────────────────────────────
-  // Build
-  // ─────────────────────────────────────────────
  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
-          // Vertical paging feed
           PageView.builder(
             scrollDirection: Axis.vertical,
             controller: _feedController.pageController,
+            // itemCount is null → infinite scroll in both directions.
             onPageChanged: _feedController.onPageChanged,
-            itemCount: videos.length,
-            itemBuilder: (context, index) => VideoPlayerItem(
-              feedController: _feedController,
-              index: index,
-              video: videos[index],
-            ),
+            itemBuilder: (context, virtualIndex) {
+              final realIndex = _feedController.realIndexFor(virtualIndex);
+              return VideoPlayerItem(
+                feedController: _feedController,
+                // Always pass the real index so the pool key stays stable.
+                index: realIndex,
+                video: videos[realIndex],
+              );
+            },
           ),
  
-          // Scrubber overlay at the bottom
           Positioned(
             left: 0,
             right: 0,

@@ -1,31 +1,27 @@
+import 'dart:async';
+
 /// Pure business logic for the paywall gate.
 ///
-/// Knows nothing about overlays, widgets, or Flutter's rendering tree.
-/// The controller owns this; the screen/widget layer reacts to [onTrigger].
+/// The free-watch duration is passed per [arm] call so each video can define
+/// its own limit via [VideoModel.paywallAfter].
 class PaywallService {
-  final Duration freeWatchLimit;
   final void Function() onTrigger;
 
-  PaywallService({
-    this.freeWatchLimit = const Duration(seconds: 10),
-    required this.onTrigger,
-  });
+  PaywallService({required this.onTrigger});
 
-  bool _triggered = false;
+  Timer? _timer;
 
-  /// Call this when a video starts (or resumes) playing.
-  /// Schedules the paywall after [freeWatchLimit] unless already triggered.
-  void arm() {
-    if (_triggered) return;
-    _triggered = true;
-
-    Future.delayed(freeWatchLimit, () {
-      onTrigger();
-    });
+  /// Starts a countdown of [freeWatchLimit] for the current video.
+  /// Cancels any previously running timer before starting a new one.
+  void arm({required Duration freeWatchLimit}) {
+    cancel();
+    _timer = Timer(freeWatchLimit, onTrigger);
   }
 
-  /// Reset so the paywall can fire again (e.g. after page change).
-  void reset() {
-    _triggered = false;
+  /// Cancels the active timer. Call on every page change so the outgoing
+  /// video's countdown cannot fire on the incoming video.
+  void cancel() {
+    _timer?.cancel();
+    _timer = null;
   }
 }
