@@ -80,11 +80,19 @@ class VideoFeedController extends ChangeNotifier {
     // Fire-and-forget preload of the next video; errors are swallowed
     // intentionally — a failed preload is non-fatal.
     if (index + 1 < videos.length) {
-      _pool
-          .getController(index + 1, videos[index + 1], currentIndex: index)
-          .catchError((error) {
-            debugPrint("⚠️ Preload failed for index ${index + 1}: $error");
-          });
+      // Run preload in an async closure to swallow errors without requiring
+      // a return value from a catchError handler.
+      () async {
+        try {
+          await _pool.getController(
+            index + 1,
+            videos[index + 1],
+            currentIndex: index,
+          );
+        } catch (error) {
+          debugPrint("⚠️ Preload failed for index ${index + 1}: $error");
+        }
+      }();
     }
 
     notifyListeners();
@@ -117,6 +125,9 @@ class VideoFeedController extends ChangeNotifier {
   void _attachVideoListener(VideoPlayerController ctrl) {
     _videoListener = () {
       if (!ctrl.value.isInitialized) return;
+      if (ctrl.value.hasError) {
+        debugPrint("Video error: ${ctrl.value.errorDescription}");
+      }
       // Only sync when not dragging — dragging takes priority.
       if (!scrubberController.value.isDragging) {
         scrubberController.syncFromVideo(ctrl.value.position);
